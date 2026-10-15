@@ -57,6 +57,10 @@ Temporary Items
 .phpunit.result.cache
 .phpunit.cache
 
+# Per-environment production settings and credentials.
+/config/database.local.php
+/config/runtime.local.php
+
 # PHPUnit
 /app/phpunit.xml
 /phpunit.xml

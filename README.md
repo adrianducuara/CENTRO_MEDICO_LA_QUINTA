@@ -73,4 +73,8 @@ En una instalación existente ejecuta `php scripts/migrate-google-oauth.php`. De
 
 En producción define `APP_ENCRYPTION_KEY` como una clave Base64 de 32 bytes, fuera del repositorio. Si la URL pública no puede detectarse de forma automática, define `GMAIL_OAUTH_REDIRECT_URI` con la misma URI registrada en Google Cloud.
 
+### Hosting compartido sin variables de entorno
+
+Si el panel no permite definir variables de entorno para PHP, copia `config/runtime.local.example.php` como `config/runtime.local.php` en el servidor y completa `app_url` y `gmail_oauth_redirect_uri` con la URL HTTPS pública. Este archivo no se versiona. La URI debe terminar exactamente en `/admin/google-oauth-callback.php` y debe coincidir con la registrada en Google Cloud.
+
 La entrega actual usa exclusivamente OAuth 2.0 y Gmail API con google/apiclient; las notificaciones PQRSF no usan SMTP como alternativa. La cuenta solo se muestra como conectada después de una prueba de envío satisfactoria.

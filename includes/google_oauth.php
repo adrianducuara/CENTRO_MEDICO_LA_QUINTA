@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/vendor/autoload.php';
+require_once __DIR__ . '/runtime_config.php';
 
 function google_oauth_key(): string {
     $raw = trim((string) getenv('APP_ENCRYPTION_KEY'));
@@ -15,7 +16,7 @@ function google_oauth_encrypt(string $value): string { if (!extension_loaded('op
 function google_oauth_decrypt(?string $value): ?string { if ($value===null || $value==='' || !extension_loaded('openssl')) return null; $raw=base64_decode($value,true); if ($raw===false || strlen($raw)<29) return null; $result=openssl_decrypt(substr($raw,28),'aes-256-gcm',google_oauth_key(),OPENSSL_RAW_DATA,substr($raw,0,12),substr($raw,12,16)); return $result===false?null:$result; }
 /** @return array<string,mixed>|null */
 function google_oauth_settings(): ?array { try { $row=db()->query('SELECT * FROM google_oauth_tokens WHERE id=1')->fetch(); if ($row===false) return null; foreach(['client_secret','access_token','refresh_token'] as $name) $row[$name]=google_oauth_decrypt($row[$name.'_encrypted']??null); return $row; } catch(PDOException) { return null; } }
-function google_oauth_redirect_uri(): string { $env=trim((string)getenv('GMAIL_OAUTH_REDIRECT_URI')); if($env!=='') return google_oauth_validate_redirect_uri($env); $host=(string)($_SERVER['HTTP_HOST']??'127.0.0.1:8083'); if(preg_match('/\A(?:localhost|127\.0\.0\.1)(?::\d+)?\z/i',$host)!==1) throw new RuntimeException('Define GMAIL_OAUTH_REDIRECT_URI con la URL HTTPS pública.'); return google_oauth_validate_redirect_uri('http://'.$host.'/admin/google-oauth-callback.php'); }
+function google_oauth_redirect_uri(): string { $configured=trim(runtime_config_value('GMAIL_OAUTH_REDIRECT_URI')); if($configured!=='') return google_oauth_validate_redirect_uri($configured); $host=(string)($_SERVER['HTTP_HOST']??'127.0.0.1:8083'); if(preg_match('/\A(?:localhost|127\.0\.0\.1)(?::\d+)?\z/i',$host)!==1) throw new RuntimeException('Define GMAIL_OAUTH_REDIRECT_URI en el entorno o en config/runtime.local.php con la URL HTTPS pública.'); return google_oauth_validate_redirect_uri('http://'.$host.'/admin/google-oauth-callback.php'); }
 function google_oauth_validate_redirect_uri(string $uri): string { $p=parse_url($uri); $host=strtolower((string)($p['host']??'')); $scheme=strtolower((string)($p['scheme']??'')); $local=in_array($host,['localhost','127.0.0.1'],true); if(($local?!in_array($scheme,['http','https'],true):$scheme!=='https') || ($p['path']??'')!=='/admin/google-oauth-callback.php' || isset($p['user'],$p['pass'])) throw new RuntimeException('La URI de redirección OAuth no es válida.'); return $uri; }
 /** @param array<string,mixed> $settings */
 function google_oauth_client(array $settings): Google\Client { $c=new Google\Client(); $c->setApplicationName('Centro Médico La Quinta'); $c->setClientId((string)$settings['client_id']); $c->setClientSecret((string)$settings['client_secret']); $c->setRedirectUri(google_oauth_redirect_uri()); $c->setScopes(['openid','email',Google\Service\Gmail::GMAIL_SEND]); $c->setAccessType('offline'); $c->setPrompt('consent select_account'); return $c; }

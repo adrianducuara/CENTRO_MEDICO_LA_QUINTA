@@ -47,6 +47,14 @@ $connectionState = google_oauth_connection_state();
 $connected = $connectionState === 'verified';
 $statusLabels = ['unconfigured' => 'Sin configurar', 'pending' => 'Pendiente de autorización', 'authorized' => 'Autorizado: falta prueba de Gmail', 'verified' => 'Conectado y verificado', 'reauth_required' => 'Sesión expirada: requiere reconexión', 'error' => 'Error de conexión'];
 $statusLabel = $statusLabels[$connectionState] ?? 'Pendiente de autorización';
+$redirectUri = null;
+$redirectUriError = null;
+try {
+    $redirectUri = google_oauth_redirect_uri();
+} catch (Throwable $exception) {
+    error_log('Configuración de URI OAuth incompleta: ' . $exception->getMessage());
+    $redirectUriError = 'Activa HTTPS y define la URI de redirección antes de conectar Google.';
+}
 $pageTitle = 'Google Cloud y Gmail';
 require __DIR__ . '/header.php';
 ?>
@@ -58,9 +66,10 @@ require __DIR__ . '/header.php';
             <span class="oauth-status <?= $connected ? 'oauth-status--connected' : 'oauth-status--disconnected' ?>"><?= e($statusLabel) ?></span>
             <h2><?= e((string) ($settings['authorized_email'] ?? $settings['sender_email'] ?? 'Conecta la cuenta institucional')) ?></h2>
             <p class="panel-description">URI de redirección autorizada en Google Cloud:</p>
-            <code class="oauth-redirect-uri"><?= e(google_oauth_redirect_uri()) ?></code>
+            <?php if ($redirectUri !== null): ?><code class="oauth-redirect-uri"><?= e($redirectUri) ?></code>
             <p class="panel-description">Copia esta URL exactamente en Google Cloud Console → Credenciales → URI de redirección autorizados.</p>
-            <?php if ($settings !== null && !empty($settings['client_id']) && !empty($settings['client_secret'])): ?>
+            <?php else: ?><p class="form-alert"><?= e($redirectUriError) ?></p><?php endif; ?>
+            <?php if ($redirectUri !== null && $settings !== null && !empty($settings['client_id']) && !empty($settings['client_secret'])): ?>
                 <?php if (in_array($connectionState, ['pending', 'reauth_required', 'error'], true)): ?><form method="post" action="google-oauth-start.php"><input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>"><button class="admin-button admin-button--primary" type="submit">Conectar con Google / Gmail</button></form><?php else: ?>
                 <div class="form-actions"><form method="post"><input type="hidden" name="action" value="test"><?= csrf_field() ?><button class="admin-button admin-button--primary" type="submit">Probar envío de correo</button></form><form method="post" data-confirm="¿Desconectar Gmail? Los tokens guardados se eliminarán."><input type="hidden" name="action" value="disconnect"><?= csrf_field() ?><button class="admin-button admin-button--quiet" type="submit">Desconectar cuenta</button></form></div>
                 <?php endif; ?>

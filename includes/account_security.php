@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/password_policy.php';
+require_once __DIR__ . '/runtime_config.php';
 
 function security_limit(string $key, int $maximum = 5): bool
 {
@@ -15,7 +16,7 @@ function security_limit(string $key, int $maximum = 5): bool
 
 function security_base_url(): string
 {
-    $url = rtrim(trim((string) getenv('APP_URL')), '/');
+    $url = rtrim(trim(runtime_config_value('APP_URL')), '/');
     if ($url === '') {
         $host = (string) ($_SERVER['HTTP_HOST'] ?? '');
         if (!preg_match('/\A(?:127\.0\.0\.1|localhost)(?::[0-9]+)?\z/', $host)) throw new RuntimeException('Configura APP_URL con la URL HTTPS del sitio.');
