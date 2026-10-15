@@ -1,5 +1,25 @@
 # Centro Médico La Quinta
 
+## Contraseña y recuperación de la cuenta
+
+La política compartida exige entre 8 y 16 puntos de código Unicode, confirmación idéntica, y rechaza contraseñas comunes de `config/password-blocklist.json`, secuencias simples, repeticiones y datos de la cuenta. Se aplica a creación por CLI, cambios desde el panel y recuperación. No exige combinaciones de mayúsculas, números o símbolos. El esquema actual no guarda nombres completos de administradores; el validador también comprueba `full_name`/`name` si se incorporan a la cuenta. La lista local es ampliable y no constituye una comprobación exhaustiva de contraseñas filtradas.
+
+Las nuevas contraseñas usan Argon2id (19 MiB, 2 iteraciones, 1 hilo); el servidor debe soportarlo. Las contraseñas existentes siguen verificándose con su hash actual. No hay truncamiento a 72 bytes ni recorte de espacios. La longitud se cuenta en puntos de código; se conservan los bytes UTF-8 exactos, sin normalización Unicode. La validación en vivo se ejecuta localmente en el navegador y el servidor vuelve a validar todo. En recuperación, los datos personales se comprueban al enviar, sin exponerlos en la página pública.
+
+La longitud mínima de 8 responde al requisito del proyecto: NIST SP 800-63B-4 exige 15 para autenticación de un solo factor. Las restricciones adicionales de patrones son requisitos del proyecto; no se afirma cumplimiento íntegro de NIST. Referencias: https://pages.nist.gov/800-63-4/sp800-63b.html y https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html.
+
+Después de instalar o actualizar, ejecuta `php scripts/migrate-account-security.php` una vez antes de servir el sitio. La migración es idempotente y conserva las cuentas y contraseñas existentes. Las sesiones anteriores deberán iniciar sesión nuevamente.
+
+En **Mi cuenta / Seguridad**, el administrador puede cambiar su contraseña proporcionando la actual, y guardar/verificar su correo de recuperación. La dirección existente se conserva hasta confirmar la nueva. El cambio de contraseña o la confirmación del correo cierra todas las sesiones e invalida los enlaces pendientes.
+
+Para habilitar **Olvidé mi contraseña**, conecta y prueba la cuenta en **Google / Gmail**, y verifica el correo desde **Mi cuenta / Seguridad**. Los correos de recuperación van a la dirección del administrador, sin cambiar el destinatario de PQRSF. No se considera verificado automáticamente ningún correo existente.
+
+Configura `APP_URL` en el entorno del servidor con la URL HTTPS del sitio (incluye el subdirectorio si corresponde). Solo localhost y 127.0.0.1 admiten HTTP para desarrollo. No se carga `.env` automáticamente. Los enlaces vencen en 30 minutos, se almacenan como hashes y solo pueden usarse una vez. Las solicitudes tienen límites por IP y correo; la respuesta pública no revela si existe la cuenta. La confirmación requiere pulsar un botón para evitar que los escáneres de correo consuman el enlace.
+
+Pruebas: `php scripts/test-account-security.php` usa tablas temporales de MySQL en su propia conexión; no modifica cuentas reales ni envía correos.
+
+Con el servidor local en `127.0.0.1:8000`, `php scripts/test-account-security-http.php` prueba los formularios con una cuenta desechable que elimina al terminar. No envía correos ni cambia la cuenta administradora.
+
 Sitio público y panel de administración en PHP 8+, con MySQL/MariaDB y PDO. Incluye portada institucional, páginas de Nosotros, Servicios y PQRSF, novedades, documentos PDF, galería de videos y herramientas de administración protegidas por sesión y token CSRF.
 
 ## Requisitos
@@ -16,7 +36,7 @@ Sitio público y panel de administración en PHP 8+, con MySQL/MariaDB y PDO. In
 4. Crea el primer administrador desde una terminal. En PowerShell:
 
    ```powershell
-   $secure = Read-Host -AsSecureString "Contraseña (mínimo 12 caracteres)"
+   $secure = Read-Host -AsSecureString "Contraseña (entre 8 y 16 caracteres)"
    $env:ADMIN_PASSWORD = [System.Net.NetworkCredential]::new("", $secure).Password
    php scripts/create-admin.php admin admin@example.com
    Remove-Item Env:ADMIN_PASSWORD

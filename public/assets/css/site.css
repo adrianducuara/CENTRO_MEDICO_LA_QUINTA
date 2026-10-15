@@ -78,6 +78,11 @@ h1, h2, h3 { font-family: Manrope, 'DM Sans', sans-serif; letter-spacing: -.035e
 
 .section { padding-block: 88px; }
 .section-news { background: #fbfcfd; }
+.mpp-section { padding-block: 72px; background: #fff; }
+.mpp-container { max-width: 1160px; }
+.mpp-images { display: grid; gap: 28px; }
+.mpp-images picture { display: block; min-width: 0; }
+.mpp-image { display: block; width: 100%; height: auto; border-radius: var(--radius); box-shadow: 0 10px 28px rgba(3,46,103,.08); }
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 33px; }
 .section-heading h2 { margin: 0; color: var(--navy); font-size: clamp(30px, 3.3vw, 42px); font-weight: 800; line-height: 1.2; }
 .text-link { display: inline-flex; align-items: center; gap: 8px; color: var(--blue); font-size: 13px; font-weight: 700; }
@@ -383,6 +388,16 @@ h1, h2, h3 { font-family: Manrope, 'DM Sans', sans-serif; letter-spacing: -.035e
 .login-intro { margin-bottom: 22px; color: var(--muted); font-size: 13px; }
 .login-card form > label { margin-top: 14px; }
 .login-card input { min-height: 45px; }
+.password-field { position: relative; width: 100%; }
+.admin-panel .password-field input:not([type=hidden]):not([type=file]), .login-card .password-field input { padding-right: 52px; }
+.password-visibility { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 44px; height: 40px; padding: 0; border: 0; border-radius: 5px; color: #42576b; background: transparent; cursor: pointer; }
+.password-visibility:hover { color: var(--blue); background: #eef5fb; }
+.password-visibility:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.password-match-feedback { font-weight: 600; }
+.password-match-feedback--match { color: #166534; }
+.password-match-feedback--mismatch { color: #b91c1c; }
+.admin-panel input[data-password-match="match"], .login-card input[data-password-match="match"] { border-color: #166534; }
+.admin-panel input[data-password-match="mismatch"], .login-card input[data-password-match="mismatch"] { border-color: #b91c1c; }
 .login-back { display: inline-block; margin-top: 23px; color: var(--blue); font-size: 12px; font-weight: 700; }
 .admin-columns--pqrsf { grid-template-columns: minmax(0, 1.2fr) minmax(330px, .8fr); }
 .table-subtext { display: inline-block; max-width: 190px; overflow: hidden; color: #8190a0; font-size: 10px; font-weight: 400; text-overflow: ellipsis; vertical-align: bottom; white-space: nowrap; }
@@ -440,6 +455,8 @@ h1, h2, h3 { font-family: Manrope, 'DM Sans', sans-serif; letter-spacing: -.035e
   .hero-image img { height: clamp(210px, 62vw, 340px); }
   .image-badge { bottom: 25px; left: -9px; font-size: 11px; }
   .section { padding-block: 61px; }
+  .mpp-section { padding-block: 52px; }
+  .mpp-images { gap: 18px; }
   .section-heading { align-items: start; flex-direction: column; gap: 15px; margin-bottom: 25px; }
   .section-heading h2 { font-size: 31px; }
   .news-grid, .pathway-grid, .values-grid, .services-grid, .public-video-grid { grid-template-columns: 1fr; gap: 15px; }

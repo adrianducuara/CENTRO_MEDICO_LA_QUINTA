@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   username VARCHAR(80) NOT NULL,
   email VARCHAR(254) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  email_verified_at DATETIME NULL,
+  session_version INT UNSIGNED NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_usuarios_username (username),

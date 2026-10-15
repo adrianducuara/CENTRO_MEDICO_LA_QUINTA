@@ -40,6 +40,9 @@ try {
     $email = google_oauth_verified_email($settings, $tokenData);
     google_oauth_save_tokens($tokenData, $email);
     flash('success', 'Cuenta autorizada. Envía una prueba de correo para completar la verificación Gmail.');
+} catch (Firebase\JWT\BeforeValidException $exception) {
+    error_log('Google OAuth: el reloj del servidor está atrasado respecto al token de Google.');
+    flash('error', 'La hora del servidor no está sincronizada con Google. Sincroniza la fecha y hora del servidor y vuelve a conectar.');
 } catch (Throwable $exception) {
     error_log('Error en callback OAuth de Google: ' . $exception->getMessage());
     flash('error', 'No se pudo completar la conexión con Google. Revise las credenciales, la URI de redirección y los registros del servidor.');
