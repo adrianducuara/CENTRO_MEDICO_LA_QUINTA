@@ -19,6 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 google_oauth_save_settings($clientId, $clientSecret, $sender, $recipient);
                 flash('success', 'La configuración de Google se guardó de forma cifrada.');
+            } catch (InvalidArgumentException $exception) {
+                flash('error', $exception->getMessage());
             } catch (Throwable $exception) {
                 error_log('No fue posible guardar OAuth Google: ' . $exception->getMessage());
                 flash('error', 'No fue posible guardar la configuración de Google.');

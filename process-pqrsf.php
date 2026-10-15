@@ -31,10 +31,18 @@ if ($errors !== []) {
 
 try {
     $reference = save_pqrsf($values);
-    $emailSent = notify_pqrsf($reference, $values);
-    echo json_encode(['status' => 'success', 'success' => true, 'radicado' => $reference, 'reference' => $reference, 'email_sent' => $emailSent], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $exception) {
     error_log('No fue posible guardar la PQRSF: ' . $exception->getMessage());
     http_response_code(500);
     echo json_encode(['status' => 'error', 'success' => false, 'message' => 'No fue posible registrar la solicitud. Inténtalo de nuevo.'], JSON_UNESCAPED_UNICODE);
+    exit;
 }
+
+// A notification failure must never turn a saved request into a submission error.
+$emailSent = false;
+try {
+    $emailSent = notify_pqrsf($reference, $values);
+} catch (Throwable $exception) {
+    error_log('Falló la notificación de la PQRSF registrada ' . $reference . ': ' . get_class($exception));
+}
+echo json_encode(['status' => 'success', 'success' => true, 'radicado' => $reference, 'reference' => $reference, 'email_sent' => $emailSent], JSON_UNESCAPED_UNICODE);

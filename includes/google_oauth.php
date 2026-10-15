@@ -23,11 +23,52 @@ function google_oauth_pkce_verifier(): string { return rtrim(strtr(base64_encode
 function google_oauth_pkce_challenge(string $verifier): string { return rtrim(strtr(base64_encode(hash('sha256',$verifier,true)),'+/','-_'),'='); }
 /** @param array<string,mixed> $settings */
 function google_oauth_authorization_url(array $settings,string $state,string $verifier): string { $c=google_oauth_client($settings); $c->setState($state); return $c->createAuthUrl().'&'.http_build_query(['code_challenge'=>google_oauth_pkce_challenge($verifier),'code_challenge_method'=>'S256'],'','&',PHP_QUERY_RFC3986); }
-function google_oauth_save_settings(string $clientId,string $clientSecret,string $sender,string $recipient): void { $cur=google_oauth_settings(); if($cur!==null && $cur['client_id']!==$clientId && $clientSecret==='') throw new InvalidArgumentException('Ingresa el Client Secret al cambiar el Client ID.'); $secret=$clientSecret!==''?google_oauth_encrypt($clientSecret):($cur['client_secret_encrypted']??null); if($secret===null) throw new InvalidArgumentException('Ingresa el Client Secret.'); $changed=$cur!==null && ($cur['client_id']!==$clientId || $clientSecret!==''); $sql="INSERT INTO google_oauth_tokens (id,client_id,client_secret_encrypted,sender_email,recipient_email,connection_status,access_token_encrypted,refresh_token_encrypted,token_expires_at) VALUES (1,:client,:secret,:sender,:recipient,'pending',NULL,NULL,NULL) ON DUPLICATE KEY UPDATE client_id=VALUES(client_id),client_secret_encrypted=VALUES(client_secret_encrypted),sender_email=VALUES(sender_email),recipient_email=VALUES(recipient_email),connection_status=IF(:changed,'pending',connection_status),access_token_encrypted=IF(:changed,NULL,access_token_encrypted),refresh_token_encrypted=IF(:changed,NULL,refresh_token_encrypted),token_expires_at=IF(:changed,NULL,token_expires_at),authorized_email=IF(:changed,NULL,authorized_email),last_error=NULL"; db()->prepare($sql)->execute(['client'=>$clientId,'secret'=>$secret,'sender'=>$sender,'recipient'=>$recipient,'changed'=>$changed?1:0]); }
+function google_oauth_save_settings(string $clientId, string $clientSecret, string $sender, string $recipient): void
+{
+    $cur = google_oauth_settings();
+    if ($cur !== null && $cur['client_id'] !== $clientId && $clientSecret === '') {
+        throw new InvalidArgumentException('Ingresa el Client Secret al cambiar el Client ID.');
+    }
+    $secret = $clientSecret !== '' ? google_oauth_encrypt($clientSecret) : ($cur['client_secret_encrypted'] ?? null);
+    if ($secret === null) throw new InvalidArgumentException('Ingresa el Client Secret.');
+    $changed = $cur !== null && ($cur['client_id'] !== $clientId || $clientSecret !== '' || strcasecmp($cur['sender_email'], $sender) !== 0);
+    // Native PDO prepares require a separate placeholder for each occurrence.
+    $sql = "INSERT INTO google_oauth_tokens
+        (id, client_id, client_secret_encrypted, sender_email, recipient_email, connection_status,
+         access_token_encrypted, refresh_token_encrypted, token_expires_at)
+        VALUES (1, :client, :secret, :sender, :recipient, 'pending', NULL, NULL, NULL)
+        ON DUPLICATE KEY UPDATE
+        client_id = VALUES(client_id), client_secret_encrypted = VALUES(client_secret_encrypted),
+        sender_email = VALUES(sender_email), recipient_email = VALUES(recipient_email),
+        connection_status = IF(:reset_status, 'pending', connection_status),
+        access_token_encrypted = IF(:reset_access, NULL, access_token_encrypted),
+        refresh_token_encrypted = IF(:reset_refresh, NULL, refresh_token_encrypted),
+        token_expires_at = IF(:reset_expiry, NULL, token_expires_at),
+        authorized_email = IF(:reset_email, NULL, authorized_email),
+        last_verified_at = IF(:reset_verified, NULL, last_verified_at), last_error = NULL";
+    db()->prepare($sql)->execute([
+        'client' => $clientId, 'secret' => $secret, 'sender' => $sender, 'recipient' => $recipient,
+        'reset_status' => (int) $changed, 'reset_access' => (int) $changed,
+        'reset_refresh' => (int) $changed, 'reset_expiry' => (int) $changed,
+        'reset_email' => (int) $changed, 'reset_verified' => (int) $changed,
+    ]);
+}
 /** @param array<string,mixed> $settings @return array<string,mixed> */
 function google_oauth_exchange_code(array $settings,string $code,string $verifier): array { $token=google_oauth_client($settings)->fetchAccessTokenWithAuthCode($code,$verifier); if(!is_array($token)||isset($token['error'])||!is_string($token['access_token']??null)) throw new RuntimeException('Google no entregó un token válido.'); return $token; }
 /** @param array<string,mixed> $settings @param array<string,mixed> $token */
-function google_oauth_verified_email(array $settings,array $token): string { $id=$token['id_token']??null; $claims=is_string($id)?google_oauth_client($settings)->verifyIdToken($id):false; $email=is_array($claims)?($claims['email']??null):null; if(!is_string($email)||!filter_var($email,FILTER_VALIDATE_EMAIL)||empty($claims['email_verified'])) throw new RuntimeException('No se pudo verificar el correo autorizado.'); return strtolower($email); }
+function google_oauth_verified_email(array $settings,array $token): string { $id=$token['id_token']??null; $claims=is_string($id)?google_oauth_verify_id_token(google_oauth_client($settings), $id):false; $email=is_array($claims)?($claims['email']??null):null; if(!is_string($email)||!filter_var($email,FILTER_VALIDATE_EMAIL)||empty($claims['email_verified'])) throw new RuntimeException('No se pudo verificar el correo autorizado.'); return strtolower($email); }
+
+/** Allow small clock differences only during Google's full ID-token validation. */
+function google_oauth_verify_id_token(Google\Client $client, string $idToken): array|false
+{
+    $previousLeeway = Firebase\JWT\JWT::$leeway;
+    Firebase\JWT\JWT::$leeway = 30;
+    try {
+        return $client->verifyIdToken($idToken);
+    } finally {
+        Firebase\JWT\JWT::$leeway = $previousLeeway;
+    }
+}
 /** @param array<string,mixed> $tokens */
 function google_oauth_save_tokens(array $tokens,string $email): void { $cur=google_oauth_settings(); $refresh=$tokens['refresh_token']??($cur['refresh_token']??null); if(!is_string($refresh)||$refresh==='') throw new RuntimeException('Google no entregó refresh token. Desconecta y vuelve a autorizar.'); $ok=strtolower((string)($cur['sender_email']??''))===$email; $status=$ok?'authorized':'error'; $error=$ok?null:'El remitente configurado no coincide con la cuenta autorizada.'; $expiry=date('Y-m-d H:i:s',time()+max(60,(int)($tokens['expires_in']??3600))-60); db()->prepare('UPDATE google_oauth_tokens SET access_token_encrypted=:access,refresh_token_encrypted=:refresh,token_expires_at=:expiry,authorized_email=:email,connection_status=:status,last_error=:error,last_checked_at=NOW() WHERE id=1')->execute(['access'=>google_oauth_encrypt((string)$tokens['access_token']),'refresh'=>google_oauth_encrypt($refresh),'expiry'=>$expiry,'email'=>$email,'status'=>$status,'error'=>$error]); if(!$ok) throw new RuntimeException('Autoriza la misma cuenta configurada como remitente.'); }
 function google_oauth_mark_status(string $status,?string $error=null,bool $checked=false): void { db()->prepare('UPDATE google_oauth_tokens SET connection_status=:status,last_error=:error,last_checked_at=IF(:checked,NOW(),last_checked_at) WHERE id=1')->execute(['status'=>$status,'error'=>$error,'checked'=>$checked?1:0]); }

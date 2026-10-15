@@ -66,8 +66,49 @@ function save_pqrsf(array $values): string
 function notify_pqrsf(string $reference, array $values): bool
 {
     require_once __DIR__ . '/gmail_api.php';
-    $gmailResult = send_pqrsf_gmail_api_notification($reference, $values);
-    db()->prepare('UPDATE pqrsf SET notification_status = :status, notification_attempted_at = NOW() WHERE reference_code = :reference')
-        ->execute(['status' => $gmailResult ? 'sent' : 'failed', 'reference' => $reference]);
+    $gmailResult = false;
+    try {
+        $gmailResult = send_pqrsf_gmail_api_notification($reference, $values);
+    } catch (Throwable $exception) {
+        error_log('Falló la notificación PQRSF ' . $reference . ': ' . get_class($exception));
+    }
+    try {
+        db()->prepare('UPDATE pqrsf SET notification_status = :status, notification_attempted_at = NOW() WHERE reference_code = :reference')
+            ->execute(['status' => $gmailResult ? 'sent' : 'failed', 'reference' => $reference]);
+    } catch (Throwable $exception) {
+        error_log('No se pudo actualizar el estado de notificación PQRSF ' . $reference . ': ' . get_class($exception));
+    }
     return $gmailResult;
+}
+
+/** Atomically reserve an unsent notification; repeated clicks wait one minute. */
+function claim_pqrsf_notification_retry(int $id): bool
+{
+    $claim = db()->prepare("UPDATE pqrsf SET notification_attempted_at = NOW()
+        WHERE id = ? AND notification_status IN ('pending', 'failed')
+        AND (notification_attempted_at IS NULL OR notification_attempted_at < DATE_SUB(NOW(), INTERVAL 1 MINUTE))");
+    $claim->execute([$id]);
+    return $claim->rowCount() === 1;
+}
+
+function retry_pqrsf_notification(int $id): string
+{
+    require_once __DIR__ . '/google_oauth.php';
+    $pdo = db();
+    $lockName = 'cmq-pqrsf-notification-' . $id;
+    $lock = $pdo->prepare('SELECT GET_LOCK(?, 0)');
+    $lock->execute([$lockName]);
+    if ((int) $lock->fetchColumn() !== 1) return 'busy';
+    try {
+        $find = $pdo->prepare('SELECT * FROM pqrsf WHERE id = ?');
+        $find->execute([$id]);
+        $request = $find->fetch();
+        if (!$request) return 'not_found';
+        if ($request['notification_status'] === 'sent') return 'already_sent';
+        if (!google_oauth_is_connected()) return 'not_connected';
+        if (!claim_pqrsf_notification_retry($id)) return 'busy';
+        return notify_pqrsf($request['reference_code'], $request) ? 'sent' : 'failed';
+    } finally {
+        $pdo->prepare('SELECT RELEASE_LOCK(?)')->execute([$lockName]);
+    }
 }

@@ -68,6 +68,22 @@ require __DIR__ . '/includes/header.php';
 </section>
 <?php endif; ?>
 
+<section class="mpp-section" id="mi-paciente-preferencial" aria-labelledby="mpp-title">
+    <div class="container mpp-container">
+        <h2 class="sr-only" id="mpp-title">Tarjeta Mi Paciente Preferencial</h2>
+        <div class="mpp-images">
+            <picture>
+                <source srcset="public/assets/images/mi-paciente-preferencial-tarjeta.webp" type="image/webp">
+                <img class="mpp-image" src="public/assets/images/mi-paciente-preferencial-tarjeta.png" alt="Tarjeta Mi Paciente Preferencial de Centro Médico La Quinta, con una familia, vigencia de un año y descuentos exclusivos para sus servicios." width="1672" height="941" loading="lazy" decoding="async">
+            </picture>
+            <picture>
+                <source srcset="public/assets/images/mi-paciente-preferencial-beneficios.webp" type="image/webp">
+                <img class="mpp-image" src="public/assets/images/mi-paciente-preferencial-beneficios.png" alt="Beneficios de la tarjeta Mi Paciente Preferencial: 5 por ciento en droguería, ecografías y RX; 10 por ciento con especialistas; 15 por ciento con médico general; y de 30 hasta 50 por ciento en procedimientos odontológicos seleccionados." width="1672" height="941" loading="lazy" decoding="async">
+            </picture>
+        </div>
+    </div>
+</section>
+
 <section class="section pathways" id="atencion">
     <div class="container">
         <div class="section-heading section-heading--center">

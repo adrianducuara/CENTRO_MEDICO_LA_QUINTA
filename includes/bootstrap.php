@@ -68,7 +68,13 @@ function redirect(string $location): never
 
 function is_admin(): bool
 {
-    return isset($_SESSION['admin_id']) && is_int($_SESSION['admin_id']);
+    if (!isset($_SESSION['admin_id'], $_SESSION['admin_version']) || !is_int($_SESSION['admin_id'])) return false;
+    $query = db()->prepare('SELECT session_version FROM usuarios WHERE id = ?');
+    $query->execute([$_SESSION['admin_id']]);
+    $version = $query->fetchColumn();
+    if ($version !== false && (int) $version === (int) $_SESSION['admin_version']) return true;
+    unset($_SESSION['admin_id'], $_SESSION['admin_username'], $_SESSION['admin_version']);
+    return false;
 }
 
 function require_admin(): void
