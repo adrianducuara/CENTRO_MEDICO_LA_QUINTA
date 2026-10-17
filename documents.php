@@ -2,7 +2,9 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 $documents = db()->query('SELECT id, title, original_name, file_size, created_at FROM documentos_pdf ORDER BY created_at DESC')->fetchAll();
-$pageTitle = 'Documentos';
+$pageTitle = 'Documentos públicos | Centro Médico La Quinta';
+$pageDescription = 'Consulte los documentos públicos disponibles de Centro Médico La Quinta en Ibagué.';
+$canonicalPath = 'documents.php';
 $activePage = 'documents';
 require __DIR__ . '/includes/header.php';
 ?>

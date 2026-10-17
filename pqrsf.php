@@ -33,7 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $reference = $_SESSION['_pqrsf_reference'] ?? null;
 unset($_SESSION['_pqrsf_reference']);
-$pageTitle = 'PQRSF';
+$pageTitle = 'PQRSF | Centro Médico La Quinta';
+$pageDescription = 'Canal de peticiones, quejas, reclamos, sugerencias y felicitaciones de Centro Médico La Quinta.';
+$canonicalPath = 'pqrsf.php';
+$robots = 'noindex,follow';
 $activePage = 'pqrsf';
 $extraScripts = ['public/assets/js/pqrsf-validation.js'];
 require __DIR__ . '/includes/header.php';

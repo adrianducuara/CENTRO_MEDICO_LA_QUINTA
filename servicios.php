@@ -4,7 +4,9 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/services.php';
 
 $services = public_services();
-$pageTitle = 'Servicios';
+$pageTitle = 'Servicios de salud en Ibagué | Centro Médico La Quinta';
+$pageDescription = 'Conozca los servicios de atención disponibles en Centro Médico La Quinta, Ibagué, y solicite orientación para su cita.';
+$canonicalPath = 'servicios.php';
 $activePage = 'services';
 require __DIR__ . '/includes/header.php';
 ?>

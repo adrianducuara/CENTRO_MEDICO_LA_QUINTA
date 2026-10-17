@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/seo.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     ini_set('session.use_strict_mode', '1');
@@ -54,6 +55,13 @@ define(
 
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
+
+// Administrative, processing and private-file endpoints must never be search
+// results. Public pages explicitly opt in through the shared page header.
+$currentScript = basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+if (!seo_is_public_script() || in_array($currentScript, ['process-pqrsf.php', 'download.php', 'post-image.php', 'video.php', 'sitemap.php'], true)) {
+    seo_send_noindex();
+}
 
 function e(?string $value): string
 {

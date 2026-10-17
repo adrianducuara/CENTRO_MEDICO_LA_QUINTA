@@ -78,3 +78,270 @@ En producción define `APP_ENCRYPTION_KEY` como una clave Base64 de 32 bytes, fu
 Si el panel no permite definir variables de entorno para PHP, copia `config/runtime.local.example.php` como `config/runtime.local.php` en el servidor y completa `app_url` y `gmail_oauth_redirect_uri` con la URL HTTPS pública. Este archivo no se versiona. La URI debe terminar exactamente en `/admin/google-oauth-callback.php` y debe coincidir con la registrada en Google Cloud.
 
 La entrega actual usa exclusivamente OAuth 2.0 y Gmail API con google/apiclient; las notificaciones PQRSF no usan SMTP como alternativa. La cuenta solo se muestra como conectada después de una prueba de envío satisfactoria.
+
+## SEO técnico e indexación
+
+### Implementación — 16 de octubre de 2026
+
+Se añadió una base de SEO técnico orientada a un sitio médico local. Los cambios
+no crean contenido clínico, perfiles de profesionales, reseñas ni afirmaciones
+no verificadas.
+
+#### Hallazgos iniciales
+
+- No existían un `robots.txt` público, sitemap, etiquetas canonical,
+  metadescripciones o marcado estructurado compartido.
+- Las páginas públicas compartían una plantilla sin controles SEO por página.
+- El enlace de acceso administrativo estaba expuesto desde el footer público.
+- Las rutas de administración, procesamiento de PQRSF y archivos protegidos no
+  declaraban un control de indexación común.
+
+#### Archivos creados
+
+- `includes/seo.php`: origen canónico validado desde `APP_URL`, utilidades de
+  URL, controles de indexación y Schema JSON-LD.
+- `robots.php`: genera el contenido de `robots.txt` con la URL de sitemap
+  obtenida de la configuración canónica.
+- `sitemap.php`: sitemap XML dinámico de páginas públicas y publicaciones
+  publicadas; usa `updated_at` para `lastmod` y excluye contenido privado.
+- `.htaccess`: publica `robots.php` como `/robots.txt`, `sitemap.php` como
+  `/sitemap.xml` y establece el documento 404 en Apache.
+- `404.php`: respuesta 404 útil y no indexable.
+- `scripts/test-seo.php`: pruebas unitarias de la configuración y Schema SEO.
+
+#### Cambios aplicados
+
+- Se añadió `X-Robots-Tag: noindex, nofollow, noarchive` a administración,
+  procesamiento de PQRSF y archivos privados/servidos por endpoint.
+- Se eliminó el enlace público al login administrativo del footer.
+- Se implementaron title, metadescripción, canonical y directiva robots por
+  página pública. La PQRSF y páginas 404 son `noindex,follow`.
+- Se añadió marcado `MedicalClinic`/`LocalBusiness` y `WebSite` en inicio,
+  tomando únicamente nombre, razón social, dirección, teléfono, coordenadas y
+  horarios que ya se mostraban en el sitio. No se incluyen reseñas,
+  calificaciones ni especialidades no verificadas.
+- Las publicaciones publicadas emiten Schema `Article` con fechas de creación
+  y actualización. No se atribuye autor o revisor médico hasta contar con esos
+  datos verificables.
+- Se declararon las dimensiones verificadas del logotipo y de la fotografía de
+  fachada; la imagen principal recibe prioridad de carga y la imagen secundaria
+  se carga de forma diferida para reducir cambios de diseño acumulados.
+- Se corrigió la URL raíz de `MedicalClinic` y `WebSite` para evitar barras
+  finales duplicadas en el JSON-LD.
+
+### Configuración obligatoria
+
+Defina `APP_URL` en el entorno de producción con la URL canónica HTTPS, sin
+barra final. En hosting compartido sin variables de entorno, cree
+`config/runtime.local.php` a partir de `config/runtime.local.example.php`:
+
+```php
+return [
+    'app_url' => 'https://www.su-dominio-real.co',
+    'gmail_oauth_redirect_uri' => 'https://www.su-dominio-real.co/admin/google-oauth-callback.php',
+];
+```
+
+No suba este archivo al repositorio. Sin `APP_URL`, el sitio continúa
+funcionando, pero por seguridad no emitirá canonical ni sitemap con un dominio
+inventado; `/sitemap.xml` responderá 503 hasta que se configure.
+
+### Verificación después del despliegue
+
+Con el dominio real configurado, compruebe:
+
+```bash
+curl -I https://www.su-dominio-real.co/
+curl https://www.su-dominio-real.co/robots.txt
+curl https://www.su-dominio-real.co/sitemap.xml
+```
+
+La home debe devolver `200`; `robots.txt` debe referenciar un sitemap HTTPS
+absoluto; el sitemap debe devolver XML, incluir solo URLs públicas canónicas y
+no contener `/admin/`, `process-pqrsf.php`, `download.php`, `video.php` ni
+`post-image.php`.
+
+Ejecute las pruebas locales:
+
+```bash
+php scripts/test-seo.php
+find . -path ./vendor -prune -o -name '*.php' -type f -print0 | xargs -0 -n1 php -l
+php scripts/test-account-security.php
+```
+
+Para una prueba HTTP local, inicie el servidor con una URL temporal segura:
+
+```bash
+APP_URL=https://centromedicolquinta.test php -S 127.0.0.1:8000
+```
+
+El servidor interno de PHP no interpreta `.htaccess`; pruebe directamente
+`/robots.php` y `/sitemap.php` en local. En Apache, verifique las rutas finales
+`/robots.txt` y `/sitemap.xml` después del despliegue.
+
+#### Pruebas ejecutadas en esta intervención
+
+- `node scripts/test-password-policy-js.cjs`: superada (14 comprobaciones).
+- `git diff --check`: superada, sin errores de espacios.
+- Revisión estática de títulos/H1, rutas de noindex y referencias a datos
+  estructurados: sin hallazgos críticos.
+- No fue posible ejecutar `php -l`, `scripts/test-seo.php` ni las pruebas PHP
+  existentes porque este entorno de trabajo no tiene un binario PHP instalado
+  ni disponible en rutas estándar. Es obligatorio ejecutarlas en el servidor
+  de despliegue o en una estación con PHP 8.1+ antes de publicar.
+
+### Seguridad de hosting y protección de código fuente
+
+La raíz incluye `.htaccess` para Apache/LiteSpeed. Además de las rutas SEO y
+la página 404, desactiva el listado de directorios y devuelve `403` a
+solicitudes HTTP de `config/`, `includes/`, `scripts/` y `vendor/`. También
+deniega archivos de configuración y mantenimiento (`composer.json`,
+`composer.lock`, `.sql`, `.md`, `.ini`, `.env`, `.log`, `.phps` y extensiones
+de respaldo o archivo), así como ficheros/directorios ocultos como `.git`.
+`.well-known/` queda excluido para permitir desafíos de certificados y
+verificaciones autorizadas.
+
+Las reglas no bloquean las páginas PHP públicas, `admin/`, `public/assets/`,
+CSS, JavaScript, imágenes, `/robots.txt` ni `/sitemap.xml`. Bloquear un
+directorio mediante rewrite solo afecta solicitudes web externas; PHP aún
+puede cargar de forma interna sus archivos desde `includes/` y `vendor/`.
+
+Cuando `mod_headers` está disponible, se añaden a respuestas estáticas y
+dinámicas: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`,
+`Referrer-Policy: strict-origin-when-cross-origin` y una
+`Permissions-Policy` que desactiva cámara, geolocalización, micrófono, pagos
+y USB. No se ha desplegado CSP todavía: el sitio usa Google Maps, WhatsApp,
+YouTube/Vimeo y OAuth, por lo que una política sin pruebas en producción puede
+interrumpir funciones legítimas.
+
+#### Verificación de seguridad posterior al despliegue
+
+Sustituya el dominio y compruebe que las rutas protegidas devuelvan `403` o
+`404`, mientras que el sitio y las rutas SEO devuelvan `200`:
+
+```bash
+curl -I https://www.su-dominio-real.co/config/database.php
+curl -I https://www.su-dominio-real.co/includes/bootstrap.php
+curl -I https://www.su-dominio-real.co/vendor/autoload.php
+curl -I https://www.su-dominio-real.co/schema.sql
+curl -I https://www.su-dominio-real.co/README.md
+curl -I https://www.su-dominio-real.co/.git/config
+curl -I https://www.su-dominio-real.co/robots.txt
+curl -I https://www.su-dominio-real.co/sitemap.xml
+curl -I https://www.su-dominio-real.co/
+```
+
+No fue posible ejecutar estas pruebas HTTP ni validar Apache en este entorno,
+porque no dispone del dominio de producción ni de un binario Apache local. No
+se deben considerar las reglas activas hasta verificar estos resultados tras
+el despliegue.
+
+#### Equivalente para Nginx
+
+Nginx no interpreta `.htaccess`. El administrador del servidor debe añadir
+reglas equivalentes dentro del bloque `server` del dominio, antes de las reglas
+generales de PHP, y validar con `nginx -t` antes de recargarlo:
+
+```nginx
+location ^~ /.well-known/ { allow all; }
+location ~ ^/(?:config|includes|scripts|vendor)(?:/|$) { return 403; }
+location ~* ^/(?:composer\.(?:json|lock)|phpunit\.xml(?:\.dist)?)$ { return 403; }
+location ~* \.(?:sql|md|ini|env|log|phps|bak|old|orig|save|swp|zip|tar|gz|tgz|bz2|7z)$ { return 403; }
+location ~ /\. { return 403; }
+
+location = /robots.txt { try_files /robots.php =404; }
+location = /sitemap.xml { try_files /sitemap.php =404; }
+error_page 404 /404.php;
+```
+
+Las cabeceras equivalentes deben configurarse con `add_header ... always` en
+Nginx. Antes de habilitar CSP, revisar en producción las solicitudes del
+navegador y permitir únicamente los orígenes externos realmente necesarios.
+
+### Herramientas externas
+
+1. La propiedad de dominio se verificó en Google Search Console mediante DNS.
+   Mantenga el registro TXT de verificación y revise periódicamente el informe
+   de indexación y las inspecciones de URL.
+2. Bing Webmaster Tools recibió el sitemap
+   `https://cmqclinicacentromedicolaquinta.com/sitemap.xml` el 17 de octubre
+   de 2026. Mientras figure con estado **En tratamiento**, no debe enviarse de
+   nuevo: hay que esperar a que Bing termine de obtenerlo y procesarlo.
+   Configure IndexNow solo después de que el sitemap muestre un resultado
+   correcto y exista una clave válida con un flujo de publicación que notifique
+   URLs nuevas o modificadas.
+3. Valide el JSON-LD con Schema Markup Validator y Rich Results Test. El
+   marcado ayuda a interpretar la entidad, pero no garantiza resultados
+   enriquecidos.
+4. Revise Search Console cada semana durante los primeros 60 días: indexación,
+   errores de rastreo, acciones manuales, problemas de seguridad y rendimiento
+   móvil.
+
+### Limitaciones conocidas
+
+#### Verificación de producción — 17 de octubre de 2026
+
+Las comprobaciones públicas confirmaron que la home, `robots.txt` y
+`sitemap.xml` responden `200`; el sitemap y las canonical usan
+`https://cmqclinicacentromedicolaquinta.com`. Las rutas de configuración y
+Git comprobadas responden `403`; el login administrativo devuelve
+`X-Robots-Tag: noindex, nofollow, noarchive`, y una URL inexistente devuelve
+`404` no indexable.
+
+La comprobación también detectó que `http://` y `https://www.` respondían
+`200`, lo que creaba variantes duplicadas. `.htaccess` incluye una redirección
+permanente `301` al origen canónico sin `www`. Como StackCDN termina TLS antes
+de Apache, la regla respeta `X-Forwarded-Proto: https`; de otro modo la URL
+canónica HTTPS se redirigiría a sí misma. Después de cada cambio de esta regla
+se debe comprobar HTTP, HTTPS, `www` y la URL canónica antes de enviar el
+sitemap a buscadores.
+
+Tras desplegar la corrección, una URL no almacenada en caché confirmó el
+comportamiento esperado: HTTPS canónico devuelve `200`; HTTP y `www` devuelven
+`301` al origen sin `www`. StackCDN aún entregaba una respuesta `301` antigua
+para la raíz sin parámetros (`X-CDN-Cache-Status: HIT`). Antes de indexar, se
+debe purgar la caché de StackCDN/StackCP para el dominio o, como mínimo, para
+`/`. Luego repetir estas comprobaciones:
+
+```bash
+curl -I http://cmqclinicacentromedicolaquinta.com/
+curl -I https://www.cmqclinicacentromedicolaquinta.com/
+curl -I https://cmqclinicacentromedicolaquinta.com/
+```
+
+El resultado final debe ser `301`, `301` y `200`, respectivamente.
+
+La propiedad de dominio `cmqclinicacentromedicolaquinta.com` fue verificada en
+Google Search Console mediante DNS el 17 de octubre de 2026. Tras purgar la
+caché CDN, la URL raíz y `/sitemap.xml` fueron comprobadas nuevamente con
+respuesta `200`. Search Console informa que la URL está disponible para Google.
+El sitemap también se envió a Bing Webmaster Tools y, al cierre de esta
+actualización, figura como **En tratamiento**. Ese estado significa que Bing lo
+recibió y lo está validando o rastreando; no es un error ni requiere reenviarlo.
+
+- Las URLs de publicaciones conservan el formato `post.php?id=...`. Es una URL
+  válida y canónica; no se introdujeron slugs para evitar una migración de base
+  de datos y redirecciones sin una tabla de mapeo completa.
+- El sitemap incluye documentos como página de listado, no URLs de descarga,
+  porque las descargas se sirven desde almacenamiento protegido.
+- No se añadieron Analytics, Tag Manager, consent banner ni píxeles: requieren
+  identificadores, consentimiento y configuración externa válida. Nunca envíe
+  datos de PQRSF o información clínica a analítica.
+
+## Intervención humana requerida
+
+En este orden de prioridad:
+
+1. Esperar a que Bing Webmaster Tools cambie el estado del sitemap de **En
+   tratamiento** a correcto o muestre un error accionable. No reenviar mientras
+   se procesa.
+2. Una vez Bing confirme el sitemap, configurar IndexNow con una clave generada
+   y guardada fuera del repositorio, además de notificaciones desde las altas,
+   actualizaciones y eliminaciones de contenido público.
+3. Reclamar y verificar Google Business Profile. Mantener nombre, dirección,
+   teléfono, horario y URL idénticos a los datos oficiales de la clínica.
+4. Validar por dirección clínica y asesoría legal las políticas de privacidad,
+   tratamiento de datos, aviso médico, servicios habilitados, profesionales,
+   licencias y cualquier contenido médico antes de publicarlo.
+5. Proporcionar perfiles y credenciales verificables de autores o revisores
+   médicos antes de añadirlos al contenido o a Schema.

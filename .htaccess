@@ -1,0 +1,46 @@
+# Apache/LiteSpeed production rules. They require AllowOverride FileInfo and
+# Options (or equivalent VirtualHost configuration). For Nginx, reproduce
+# these rules in the server block; see README.md.
+Options -Indexes
+DirectoryIndex index.php
+
+RewriteEngine On
+
+# One public origin prevents HTTP and www duplicates. StackCDN terminates TLS
+# before Apache, so X-Forwarded-Proto must also be treated as HTTPS. The target
+# is fixed, rather than reflected from the Host header, to avoid open redirects.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+RewriteRule ^ https://cmqclinicacentromedicolaquinta.com%{REQUEST_URI} [R=301,L]
+
+RewriteCond %{HTTP_HOST} !^cmqclinicacentromedicolaquinta\.com$ [NC]
+RewriteRule ^ https://cmqclinicacentromedicolaquinta.com%{REQUEST_URI} [R=301,L]
+
+# Never expose implementation, dependency, maintenance or configuration paths
+# over HTTP. These directives do not affect PHP's internal require/include.
+RewriteRule ^(?:config|includes|scripts|vendor)(?:/|$) - [F,L,NC]
+RewriteRule ^(?:composer\.(?:json|lock)|phpunit\.xml(?:\.dist)?)$ - [F,L,NC]
+RewriteRule \.(?:sql|md|ini|env|log|phps|bak|old|orig|save|swp|zip|tar|gz|tgz|bz2|7z)$ - [F,L,NC]
+
+# Keep ACME/Search Console validation possible, but deny every other hidden
+# file or directory, including .git, .htaccess and local runtime files.
+RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L,NC]
+
+# Keep these public SEO endpoints available after the protection rules above.
+RewriteRule ^robots\.txt$ robots.php [L]
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
+ErrorDocument 404 /404.php
+
+# These headers also cover static assets. PHP sends the first and third for
+# dynamic responses; Header "set" avoids a duplicate value when available.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), geolocation=(), microphone=(), payment=(), usb=()"
+</IfModule>
+
+# Content-Security-Policy is intentionally not enabled here. It requires a
+# production validation against Google Maps, WhatsApp, YouTube/Vimeo and the
+# OAuth flow before it can be safely enforced.

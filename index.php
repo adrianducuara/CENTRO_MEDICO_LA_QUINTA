@@ -8,7 +8,10 @@ $statement = db()->query("SELECT id, title, content, image_path, created_at FROM
 $latestPosts = $statement->fetchAll();
 $featuredServices = public_services();
 $latestVideos = public_videos(12);
-$pageTitle = 'Inicio';
+$pageTitle = 'Centro Médico La Quinta en Ibagué | Servicios y atención';
+$pageDescription = 'Centro Médico La Quinta en Ibagué: servicios de atención, horarios, ubicación y canales para solicitar orientación sobre una cita.';
+$canonicalPath = '';
+$structuredData = [seo_medical_clinic_schema(), seo_website_schema()];
 $activePage = 'home';
 require __DIR__ . '/includes/header.php';
 ?>
@@ -28,7 +31,7 @@ require __DIR__ . '/includes/header.php';
             </div>
         </div>
         <div class="hero-image">
-            <img src="public/assets/images/fachada-clinica.jpeg" alt="Fachada de Centro Médico La Quinta">
+            <img src="public/assets/images/fachada-clinica.jpeg" alt="Fachada de Centro Médico La Quinta" width="1365" height="768" fetchpriority="high">
             <div class="image-badge"><span class="badge-dot"></span> Cuidamos de ti y tu familia</div>
         </div>
     </div>

@@ -6,14 +6,39 @@ if (!$id || $id < 1) {
     http_response_code(404);
     $post = null;
 } else {
-    $query = db()->prepare("SELECT id, title, content, image_path, created_at FROM posts WHERE id = :id AND status = 'published'");
+    $query = db()->prepare("SELECT id, title, content, image_path, created_at, updated_at FROM posts WHERE id = :id AND status = 'published'");
     $query->execute(['id' => $id]);
     $post = $query->fetch() ?: null;
     if ($post === null) {
         http_response_code(404);
     }
 }
-$pageTitle = $post === null ? 'Artículo no encontrado' : $post['title'];
+$pageTitle = $post === null ? 'Artículo no encontrado | Centro Médico La Quinta' : $post['title'] . ' | Centro Médico La Quinta';
+$pageDescription = $post === null
+    ? 'La publicación solicitada no está disponible. Consulte las novedades de Centro Médico La Quinta.'
+    : post_excerpt((string) $post['content'], 155);
+$canonicalPath = $post === null ? 'post.php' : 'post.php?id=' . (int) $post['id'];
+$robots = $post === null ? 'noindex,follow' : 'index,follow';
+if ($post === null) {
+    seo_send_noindex();
+}
+$structuredData = [];
+if ($post !== null) {
+    $articleUrl = seo_absolute_url($canonicalPath);
+    $articleSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => 'Article',
+        'headline' => (string) $post['title'],
+        'datePublished' => date(DATE_ATOM, strtotime((string) $post['created_at']) ?: time()),
+        'dateModified' => date(DATE_ATOM, strtotime((string) $post['updated_at']) ?: time()),
+        'mainEntityOfPage' => $articleUrl === null ? null : ['@type' => 'WebPage', '@id' => $articleUrl],
+        'publisher' => seo_absolute_url() === null ? null : ['@id' => seo_absolute_url() . '#centro-medico-la-quinta'],
+    ];
+    if (!empty($post['image_path']) && $articleUrl !== null) {
+        $articleSchema['image'] = seo_absolute_url('post-image.php?id=' . (int) $post['id']);
+    }
+    $structuredData[] = array_filter($articleSchema, static fn ($value): bool => $value !== null);
+}
 $activePage = 'posts';
 require __DIR__ . '/includes/header.php';
 ?>

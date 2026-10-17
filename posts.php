@@ -5,7 +5,9 @@ require_once __DIR__ . '/includes/videos.php';
 
 $posts = db()->query("SELECT id, title, content, image_path, created_at FROM posts WHERE status = 'published' ORDER BY created_at DESC, id DESC")->fetchAll();
 $videos = public_videos();
-$pageTitle = 'Novedades';
+$pageTitle = 'Novedades de salud | Centro Médico La Quinta';
+$pageDescription = 'Consulte novedades, información institucional y contenidos publicados por Centro Médico La Quinta en Ibagué.';
+$canonicalPath = 'posts.php';
 $activePage = 'posts';
 require __DIR__ . '/includes/header.php';
 ?>

@@ -2,7 +2,9 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 
-$pageTitle = 'Nosotros';
+$pageTitle = 'Centro Médico La Quinta en Ibagué | Nuestra institución';
+$pageDescription = 'Conozca la identidad institucional, misión, visión y compromiso de calidad de Centro Médico La Quinta en Ibagué.';
+$canonicalPath = 'nosotros.php';
 $activePage = 'about';
 require __DIR__ . '/includes/header.php';
 ?>
@@ -16,7 +18,7 @@ require __DIR__ . '/includes/header.php';
 
 <section class="section about-intro">
     <div class="container about-intro-grid">
-        <div class="about-photo"><img src="public/assets/images/fachada-clinica.jpeg" alt="Instalaciones del Centro Médico La Quinta"></div>
+        <div class="about-photo"><img src="public/assets/images/fachada-clinica.jpeg" alt="Instalaciones del Centro Médico La Quinta" width="1365" height="768" loading="lazy" decoding="async"></div>
         <div class="about-copy">
             <p class="eyebrow">Nuestra institución</p>
             <h2>Misión, visión y política de calidad</h2>

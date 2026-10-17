@@ -1,6 +1,11 @@
 <?php
 $pageTitle = $pageTitle ?? 'Centro Médico La Quinta';
+$pageDescription = $pageDescription ?? 'Centro Médico La Quinta en Ibagué. Conozca nuestros servicios, horarios y canales de atención.';
 $activePage = $activePage ?? '';
+$robots = $robots ?? 'index,follow';
+$canonicalPath = $canonicalPath ?? basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php'));
+$canonicalUrl = seo_absolute_url($canonicalPath);
+$structuredData = $structuredData ?? [];
 $notice = flash();
 ?>
 <!doctype html>
@@ -9,7 +14,17 @@ $notice = flash();
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#ffffff">
-    <title><?= e($pageTitle) ?> | Centro Médico La Quinta</title>
+    <title><?= e($pageTitle) ?></title>
+    <meta name="description" content="<?= e($pageDescription) ?>">
+    <meta name="robots" content="<?= e($robots) ?>">
+    <?php if ($canonicalUrl !== null): ?><link rel="canonical" href="<?= e($canonicalUrl) ?>">
+    <meta property="og:locale" content="es_CO">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="<?= e($pageTitle) ?>">
+    <meta property="og:description" content="<?= e($pageDescription) ?>">
+    <meta property="og:url" content="<?= e($canonicalUrl) ?>">
+    <meta name="twitter:card" content="summary">
+    <?php endif; ?>
     <link rel="icon" href="public/assets/images/cmq-site-icon.jpeg">
     <link rel="stylesheet" href="public/assets/css/site.css">
     <link rel="stylesheet" href="public/assets/css/carousel.css">
@@ -17,13 +32,14 @@ $notice = flash();
     <script src="public/assets/js/carousel.js" defer></script>
     <script src="public/assets/js/typewriter.js" defer></script>
     <?php foreach (($extraScripts ?? []) as $script): ?><script src="<?= e($script) ?>" defer></script><?php endforeach; ?>
+    <?php foreach ($structuredData as $schema): ?><?php if (is_array($schema) && $schema !== []): ?><script type="application/ld+json"><?= seo_schema_json($schema) ?></script><?php endif; ?><?php endforeach; ?>
 </head>
 <body>
 <a class="skip-link" href="#main">Saltar al contenido</a>
 <header class="site-header">
     <div class="container header-inner">
         <a class="brand" href="index.php" aria-label="Centro Médico La Quinta, inicio">
-            <img src="public/assets/images/cmq-clinic-logo-transparent.png" alt="Clínica Integral Provida S.A.S. — Centro Médico La Quinta">
+            <img src="public/assets/images/cmq-clinic-logo-transparent.png" alt="Clínica Integral Provida S.A.S. — Centro Médico La Quinta" width="2169" height="725">
         </a>
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-navigation">
             <span class="menu-icon" aria-hidden="true"></span>

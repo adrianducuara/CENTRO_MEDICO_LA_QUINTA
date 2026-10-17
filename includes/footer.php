@@ -24,7 +24,7 @@
             <p>Sábado: 7:00 a. m. a 5:00 p. m.<br>Domingo: cerrado</p>
         </section>
     </div>
-    <div class="footer-bottom"><div class="container"><span>© <?= date('Y') ?> Centro Médico La Quinta</span><a class="footer-admin-link" href="admin/login.php" aria-label="Ingresar a la administración del sitio">Administración <span aria-hidden="true">→</span></a></div></div>
+    <div class="footer-bottom"><div class="container"><span>© <?= date('Y') ?> Centro Médico La Quinta</span></div></div>
 </footer>
 </body>
 </html>
