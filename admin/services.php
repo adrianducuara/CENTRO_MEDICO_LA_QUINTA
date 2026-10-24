@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/services.php';
+require_once __DIR__ . '/../includes/indexnow.php';
 require_admin();
 
 $pdo = db();
@@ -16,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $delete = $pdo->prepare('DELETE FROM servicios WHERE id = :id');
             $delete->execute(['id' => $id]);
+            indexnow_notify_paths(['', 'servicios.php']);
             flash('success', 'El servicio se eliminó correctamente.');
         }
         redirect('services.php');
@@ -45,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $save->execute(['title' => $title, 'description' => $description, 'icon' => $icon, 'sort_order' => $sortOrder, 'status' => $status]);
         flash('success', 'El servicio se creó correctamente.');
     }
+    indexnow_notify_paths(['', 'servicios.php']);
     redirect('services.php');
 }
 

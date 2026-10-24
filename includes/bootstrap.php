@@ -4,14 +4,21 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/seo.php';
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
+function app_start_session(): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        return;
+    }
+
     ini_set('session.use_strict_mode', '1');
     ini_set('session.cookie_httponly', '1');
     // Lax preserves the administrator session for Google's top-level OAuth callback.
     ini_set('session.cookie_samesite', 'Lax');
+    $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
     session_set_cookie_params([
         'httponly' => true,
-        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'secure' => $isHttps,
         'samesite' => 'Lax',
         'path' => '/',
     ]);
@@ -76,6 +83,7 @@ function redirect(string $location): never
 
 function is_admin(): bool
 {
+    app_start_session();
     if (!isset($_SESSION['admin_id'], $_SESSION['admin_version']) || !is_int($_SESSION['admin_id'])) return false;
     $query = db()->prepare('SELECT session_version FROM usuarios WHERE id = ?');
     $query->execute([$_SESSION['admin_id']]);
@@ -94,6 +102,7 @@ function require_admin(): void
 
 function csrf_token(): string
 {
+    app_start_session();
     if (!isset($_SESSION['_csrf'])) {
         $_SESSION['_csrf'] = bin2hex(random_bytes(32));
     }
@@ -117,7 +126,15 @@ function verify_csrf(): void
 function flash(?string $type = null, ?string $message = null): ?array
 {
     if ($type !== null && $message !== null) {
+        app_start_session();
         $_SESSION['_flash'] = ['type' => $type, 'message' => $message];
+        return null;
+    }
+
+    // Public cacheable pages do not need a PHP session merely to check for a
+    // flash message. Administration and PQRSF start one explicitly before
+    // rendering when they require session-backed state.
+    if (session_status() !== PHP_SESSION_ACTIVE) {
         return null;
     }
 

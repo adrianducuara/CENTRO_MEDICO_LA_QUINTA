@@ -17,6 +17,7 @@
             <p><a href="servicios.php">Servicios de atención</a></p>
             <p><a href="documents.php">Documentos públicos</a></p>
             <p><a href="pqrsf.php">PQRSF</a></p>
+            <p><a href="admin/login.php">Acceso administrativo</a></p>
         </section>
         <section>
             <h2>Horarios</h2>

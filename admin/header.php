@@ -1,5 +1,6 @@
 <?php
 $pageTitle = $pageTitle ?? 'Administración';
+app_start_session();
 $notice = flash();
 ?>
 <!doctype html>

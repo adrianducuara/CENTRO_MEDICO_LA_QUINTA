@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/post_images.php';
+require_once __DIR__ . '/../includes/indexnow.php';
 require_admin();
 
 $pdo = db();
@@ -25,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $delete = $pdo->prepare('DELETE FROM posts WHERE id = :id');
         $delete->execute(['id' => $id]);
         remove_post_image(is_string($post['image_path']) ? $post['image_path'] : null);
+        indexnow_notify_paths(['', 'posts.php', 'post.php?id=' . $id]);
         flash('success', 'La publicación se eliminó correctamente.');
         redirect('posts.php');
     }
@@ -90,6 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($previousPath !== null && $previousPath !== $nextPath) {
         remove_post_image($previousPath);
     }
+    $postId = $existing !== null ? (int) $existing['id'] : (int) $pdo->lastInsertId();
+    indexnow_notify_paths(['', 'posts.php', 'post.php?id=' . $postId]);
     flash('success', $existing !== null ? 'La publicación se actualizó correctamente.' : 'La publicación se creó correctamente.');
     redirect('posts.php');
 }

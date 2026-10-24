@@ -23,7 +23,7 @@ require __DIR__ . '/includes/header.php';
             <div class="updates-stream" aria-label="Noticias recientes">
                 <?php foreach ($posts as $post): ?>
                 <article class="update-item update-item--post">
-                    <?php if (!empty($post['image_path'])): ?><div class="update-media"><img src="post-image.php?id=<?= (int) $post['id'] ?>" alt="Imagen de <?= e($post['title']) ?>"></div><?php endif; ?>
+                    <?php if (!empty($post['image_path'])): ?><div class="update-media"><img src="post-image.php?id=<?= (int) $post['id'] ?>" alt="Imagen de <?= e($post['title']) ?>" loading="lazy" decoding="async"></div><?php endif; ?>
                     <div class="update-copy">
                         <p class="card-date"><?= e(format_date($post['created_at'])) ?> <span>·</span> Actualidad</p>
                         <h2><a href="post.php?id=<?= (int) $post['id'] ?>"><?= e($post['title']) ?></a></h2>

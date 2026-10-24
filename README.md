@@ -108,6 +108,14 @@ no verificadas.
   `/sitemap.xml` y establece el documento 404 en Apache.
 - `404.php`: respuesta 404 útil y no indexable.
 - `scripts/test-seo.php`: pruebas unitarias de la configuración y Schema SEO.
+- `scripts/test-public-session.php`: comprueba que una respuesta pública no
+  cree sesión y que los formularios protegidos sí puedan iniciar CSRF.
+- `includes/indexnow.php`: construye y envía notificaciones IndexNow con
+  validación del host canónico y límites del protocolo.
+- `7a9e7d560ea5da946d44edf4c1a20370.txt`: archivo público de validación de la
+  clave IndexNow en la raíz web.
+- `scripts/test-indexnow.php` y `scripts/submit-indexnow.php`: prueba local y
+  envío inicial por CLI, respectivamente.
 
 #### Cambios aplicados
 
@@ -128,6 +136,24 @@ no verificadas.
   se carga de forma diferida para reducir cambios de diseño acumulados.
 - Se corrigió la URL raíz de `MedicalClinic` y `WebSite` para evitar barras
   finales duplicadas en el JSON-LD.
+- Se añadieron etiquetas Open Graph y Twitter Card con una imagen institucional
+  HTTPS para que las páginas públicas tengan vistas previas completas al
+  compartirse. Las publicaciones con imagen usan su propia imagen; no se
+  declaran dimensiones ni tipo MIME cuando el archivo subido no lo garantiza.
+- Se eliminó el inicio incondicional de sesión PHP en páginas públicas. Ahora
+  solo administración y PQRSF inician sesión: las páginas indexables, el
+  sitemap y los recursos públicos dejan de crear una cookie PHP o de forzar
+  `Cache-Control: no-store`, lo que permite que el CDN las almacene según su
+  configuración.
+- Se integró IndexNow tras la verificación del sitemap en Bing Webmaster Tools.
+  Las publicaciones notifican su URL, inicio y novedades al crear, modificar,
+  despublicar o eliminar; los servicios notifican inicio y servicios; los
+  documentos notifican su listado; y los videos notifican inicio y novedades.
+  La notificación se realiza después de guardar y nunca revierte el cambio de
+  contenido si el proveedor no responde. Cada intento tiene un límite de tres
+  segundos y los fallos quedan únicamente en el registro PHP. Si IndexNow
+  responde `429`, se guarda un límite privado de 24 horas para impedir envíos
+  repetidos desde cambios posteriores de contenido.
 
 ### Configuración obligatoria
 
@@ -165,6 +191,8 @@ Ejecute las pruebas locales:
 
 ```bash
 php scripts/test-seo.php
+php scripts/test-public-session.php
+php scripts/test-indexnow.php
 find . -path ./vendor -prune -o -name '*.php' -type f -print0 | xargs -0 -n1 php -l
 php scripts/test-account-security.php
 ```
@@ -179,6 +207,36 @@ El servidor interno de PHP no interpreta `.htaccess`; pruebe directamente
 `/robots.php` y `/sitemap.php` en local. En Apache, verifique las rutas finales
 `/robots.txt` y `/sitemap.xml` después del despliegue.
 
+### IndexNow
+
+La clave de IndexNow se valida mediante el archivo público
+`/7a9e7d560ea5da946d44edf4c1a20370.txt`, que debe responder `200`, con una
+única línea que coincide exactamente con el nombre sin la extensión `.txt`.
+No lo bloquee con reglas de seguridad ni lo cambie sin actualizar
+`INDEXNOW_KEY_FILE` en `includes/indexnow.php`.
+
+Después de desplegar los archivos, ejecute una sola vez desde la raíz del
+proyecto en el hosting:
+
+```bash
+php scripts/test-indexnow.php
+php scripts/submit-indexnow.php
+curl -i https://cmqclinicacentromedicolaquinta.com/7a9e7d560ea5da946d44edf4c1a20370.txt
+```
+
+El primer comando no realiza conexiones externas. El segundo notifica las URLs
+públicas actuales y solo se puede ejecutar por CLI; no es accesible por web
+porque `scripts/` está protegido. Una respuesta `200` o `202` de IndexNow
+significa recepción o validación pendiente, no indexación garantizada. IndexNow
+complementa el sitemap para motores participantes; no sustituye Search Console
+ni el rastreo de Google.
+
+Si el envío devuelve `429`, no genere otra clave ni repita el comando. El
+proveedor aplicó un límite de frecuencia; espere al menos 24 horas y ejecute
+`php scripts/submit-indexnow.php` una sola vez. La aplicación registra ese
+límite de forma privada para que los cambios administrativos no vuelvan a
+enviar solicitudes durante ese periodo.
+
 #### Pruebas ejecutadas en esta intervención
 
 - `node scripts/test-password-policy-js.cjs`: superada (14 comprobaciones).
@@ -189,6 +247,20 @@ El servidor interno de PHP no interpreta `.htaccess`; pruebe directamente
   existentes porque este entorno de trabajo no tiene un binario PHP instalado
   ni disponible en rutas estándar. Es obligatorio ejecutarlas en el servidor
   de despliegue o en una estación con PHP 8.1+ antes de publicar.
+- La comprobación HTTPS pública previa al ajuste confirmó que la página de
+  inicio respondía `200`, pero enviaba `PHPSESSID` y
+  `Cache-Control: no-store` a visitantes anónimos. El cambio de sesiones debe
+  comprobarse tras desplegar: la home y `sitemap.xml` no deben incluir
+  `Set-Cookie: PHPSESSID` ni `no-store`; PQRSF y administración deben conservar
+  sus sesiones, CSRF, avisos y autenticación.
+- Rastreo público de solo lectura (17 de octubre de 2026): las cinco URLs
+  declaradas en el sitemap respondieron `200`; HTTP y `www` redirigieron con
+  `301` a la URL HTTPS canónica; una ruta inexistente devolvió `404` con
+  `X-Robots-Tag: noindex, nofollow, noarchive`. Las páginas revisadas tienen
+  título, metadescripción, canonical y directiva robots coherentes. La consulta
+  a la API pública de PageSpeed no devolvió categorías Lighthouse, por lo que
+  no se registraron métricas ni se aplicaron cambios de rendimiento basados en
+  esa respuesta incompleta.
 
 ### Seguridad de hosting y protección de código fuente
 
@@ -276,6 +348,22 @@ navegador y permitir únicamente los orígenes externos realmente necesarios.
 4. Revise Search Console cada semana durante los primeros 60 días: indexación,
    errores de rastreo, acciones manuales, problemas de seguridad y rendimiento
    móvil.
+
+#### Consolidación de marca local — pendiente de validación humana
+
+La búsqueda pública del 17 de octubre de 2026 para variaciones de la marca en
+Ibagué devolvió principalmente fichas de terceros. Algunas de ellas muestran
+un dominio anterior (`clinicacentromedicolaquinta.com`), teléfonos u horarios
+distintos de los publicados actualmente. No se deben copiar esos datos al
+sitio: la dirección clínica debe definir una única fuente oficial de nombre
+comercial, razón social, dirección, teléfono, horario, categoría y URL HTTPS.
+
+Con esos datos aprobados, el responsable debe reclamar o corregir Google
+Business Profile, Waze, directorios y redes institucionales. Usar exactamente
+el mismo NAP (nombre, dirección y teléfono) y URL canónica
+`https://cmqclinicacentromedicolaquinta.com/`; no añadir palabras clave al
+nombre del perfil, ni reseñas o servicios no verificados. Esta consolidación
+es prioritaria para consultas de marca como “clinica centro medico la quinta”.
 
 ### Limitaciones conocidas
 

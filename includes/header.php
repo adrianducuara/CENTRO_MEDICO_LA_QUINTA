@@ -6,6 +6,12 @@ $robots = $robots ?? 'index,follow';
 $canonicalPath = $canonicalPath ?? basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php'));
 $canonicalUrl = seo_absolute_url($canonicalPath);
 $structuredData = $structuredData ?? [];
+$openGraphType = $openGraphType ?? 'website';
+$socialImagePath = $socialImagePath ?? 'public/assets/images/fachada-clinica.jpeg';
+$socialImageUrl = seo_absolute_url($socialImagePath);
+$socialImageAlt = $socialImageAlt ?? 'Fachada de Centro Médico La Quinta en Ibagué';
+$socialImageDimensions = $socialImageDimensions ?? [1365, 768];
+$socialImageType = $socialImageType ?? 'image/jpeg';
 $notice = flash();
 ?>
 <!doctype html>
@@ -19,11 +25,25 @@ $notice = flash();
     <meta name="robots" content="<?= e($robots) ?>">
     <?php if ($canonicalUrl !== null): ?><link rel="canonical" href="<?= e($canonicalUrl) ?>">
     <meta property="og:locale" content="es_CO">
-    <meta property="og:type" content="website">
+    <meta property="og:type" content="<?= e($openGraphType) ?>">
+    <meta property="og:site_name" content="Centro Médico La Quinta">
     <meta property="og:title" content="<?= e($pageTitle) ?>">
     <meta property="og:description" content="<?= e($pageDescription) ?>">
     <meta property="og:url" content="<?= e($canonicalUrl) ?>">
-    <meta name="twitter:card" content="summary">
+    <?php if ($socialImageUrl !== null): ?>
+    <meta property="og:image" content="<?= e($socialImageUrl) ?>">
+    <meta property="og:image:secure_url" content="<?= e($socialImageUrl) ?>">
+    <?php if (is_string($socialImageType)): ?><meta property="og:image:type" content="<?= e($socialImageType) ?>">
+    <?php endif; ?><?php if (is_array($socialImageDimensions) && isset($socialImageDimensions[0], $socialImageDimensions[1]) && is_int($socialImageDimensions[0]) && is_int($socialImageDimensions[1])): ?><meta property="og:image:width" content="<?= $socialImageDimensions[0] ?>">
+    <meta property="og:image:height" content="<?= $socialImageDimensions[1] ?>">
+    <?php endif; ?><meta property="og:image:alt" content="<?= e($socialImageAlt) ?>">
+    <?php endif; ?>
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="<?= e($pageTitle) ?>">
+    <meta name="twitter:description" content="<?= e($pageDescription) ?>">
+    <?php if ($socialImageUrl !== null): ?><meta name="twitter:image" content="<?= e($socialImageUrl) ?>">
+    <meta name="twitter:image:alt" content="<?= e($socialImageAlt) ?>">
+    <?php endif; ?>
     <?php endif; ?>
     <link rel="icon" href="public/assets/images/cmq-site-icon.jpeg">
     <link rel="stylesheet" href="public/assets/css/site.css">

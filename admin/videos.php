@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/videos.php';
+require_once __DIR__ . '/../includes/indexnow.php';
 require_admin();
 
 $pdo = db();
@@ -34,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $delete = $pdo->prepare('DELETE FROM videos WHERE id = :id');
         $delete->execute(['id' => $id]);
+        indexnow_notify_paths(['', 'posts.php']);
         flash('success', 'El video se eliminó correctamente.');
         redirect('videos.php');
     }
@@ -107,6 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', 'No fue posible guardar el video. Verifica que el enlace no esté registrado.');
             redirect('videos.php');
         }
+        indexnow_notify_paths(['', 'posts.php']);
         flash('success', 'El video se guardó correctamente.');
         redirect('videos.php');
     }

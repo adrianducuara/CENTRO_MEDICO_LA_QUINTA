@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/indexnow.php';
 require_admin();
 
 $pdo = db();
@@ -28,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('No fue posible eliminar el archivo PDF del almacenamiento.');
             }
         }
+        indexnow_notify_paths(['documents.php']);
         flash('success', 'El documento se eliminó correctamente.');
         redirect('documents.php');
     }
@@ -103,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         throw $exception;
     }
+    indexnow_notify_paths(['documents.php']);
     flash('success', 'El PDF se publicó correctamente.');
     redirect('documents.php');
 }

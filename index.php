@@ -48,7 +48,7 @@ require __DIR__ . '/includes/header.php';
             <div class="carousel-wrapper carousel-viewport"><div class="carousel-track">
             <?php foreach ($latestPosts as $post): ?><div class="carousel-slide">
             <article class="news-card">
-                <div class="news-card-art<?= !empty($post['image_path']) ? ' news-card-art--image' : '' ?>"<?= !empty($post['image_path']) ? '' : ' aria-hidden="true"' ?>><?php if (!empty($post['image_path'])): ?><img src="post-image.php?id=<?= (int) $post['id'] ?>" alt="Imagen de <?= e($post['title']) ?>"><?php else: ?><span>CMQ</span><i>+</i><?php endif; ?></div>
+                <div class="news-card-art<?= !empty($post['image_path']) ? ' news-card-art--image' : '' ?>"<?= !empty($post['image_path']) ? '' : ' aria-hidden="true"' ?>><?php if (!empty($post['image_path'])): ?><img src="post-image.php?id=<?= (int) $post['id'] ?>" alt="Imagen de <?= e($post['title']) ?>" loading="lazy" decoding="async"><?php else: ?><span>CMQ</span><i>+</i><?php endif; ?></div>
                 <div class="news-card-body">
                     <p class="card-date"><?= e(format_date($post['created_at'])) ?> <span>·</span> Actualidad</p>
                     <h3><a href="post.php?id=<?= (int) $post['id'] ?>"><?= e($post['title']) ?></a></h3>

@@ -22,6 +22,15 @@ $robots = $post === null ? 'noindex,follow' : 'index,follow';
 if ($post === null) {
     seo_send_noindex();
 }
+$openGraphType = $post === null ? 'website' : 'article';
+if ($post !== null && !empty($post['image_path'])) {
+    $socialImagePath = 'post-image.php?id=' . (int) $post['id'];
+    $socialImageAlt = 'Imagen de ' . (string) $post['title'];
+    // User-uploaded images have variable dimensions, so no fixed dimensions
+    // or MIME type are declared for their social preview.
+    $socialImageDimensions = false;
+    $socialImageType = false;
+}
 $structuredData = [];
 if ($post !== null) {
     $articleUrl = seo_absolute_url($canonicalPath);

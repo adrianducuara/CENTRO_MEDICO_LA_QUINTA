@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/pqrsf.php';
+app_start_session();
 
 $types = pqrsf_types();
 $documentTypes = pqrsf_document_types();
