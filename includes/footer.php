@@ -17,7 +17,6 @@
             <p><a href="servicios.php">Servicios de atención</a></p>
             <p><a href="documents.php">Documentos públicos</a></p>
             <p><a href="pqrsf.php">PQRSF</a></p>
-            <p><a href="admin/login.php">Acceso administrativo</a></p>
         </section>
         <section>
             <h2>Horarios</h2>
@@ -25,7 +24,7 @@
             <p>Sábado: 7:00 a. m. a 5:00 p. m.<br>Domingo: cerrado</p>
         </section>
     </div>
-    <div class="footer-bottom"><div class="container"><span>© <?= date('Y') ?> Centro Médico La Quinta</span></div></div>
+    <div class="footer-bottom"><div class="container"><span>© <?= date('Y') ?> Centro Médico La Quinta</span><a class="footer-admin-link" href="admin/login.php">Acceso administrativo <span aria-hidden="true">→</span></a></div></div>
 </footer>
 </body>
 </html>
